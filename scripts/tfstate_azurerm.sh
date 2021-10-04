@@ -553,35 +553,32 @@ function other {
 
 function get_storage_id {
     echo "@calling get_storage_id"
+
+    # Attempt to find the storage account containing the launchpad matching environment and level
     id=$(execute_with_backoff az storage account list \
-        --subscription ${TF_VAR_tfstate_subscription_id} \
-        --query "[?tags.tfstate=='${TF_VAR_level}' && tags.environment=='${TF_VAR_environment}'].{id:id}[0]" -o json | jq -r .id)
+      --subscription ${TF_VAR_tfstate_subscription_id} \
+      --query "[?tags.tfstate=='${TF_VAR_level}' && \
+      tags.environment=='${TF_VAR_environment}'].{id:id}[0]" -o json \
+      | jq -r .id)
 
-    if [[ ${id} == null ]] && [ "${caf_command}" != "launchpad" ]; then
-        # Check if other launchpad are installed
-        id=$(execute_with_backoff az storage account list \
-            --subscription ${TF_VAR_tfstate_subscription_id} \
-            --query "[?tags.tfstate=='${TF_VAR_level}'].{id:id}[0]" -o json | jq -r .id)
-
-        if [ ${id} == null ]; then
-            if [ ${TF_VAR_level} != "level0" ]; then
-                echo "You need to initialize that level first before using it or you do not have permission to that level."
-            else
-                display_launchpad_instructions
-            fi
-            exit 1000
+    if [[ ${id} == '' ]] && [ "${caf_command}" != "launchpad" ]; then
+        if [ ${TF_VAR_level} != "level0" ]; then
+            echo
+            echo "Could not find remote state for ${TF_VAR_level} in the environment "
+            echo "${TF_VAR_environment} in the subscription ${TF_VAR_tfstate_subscription_id}."
+            echo
+            echo "It may exist but you don't have permissions to access the resources, or, you may"
+            echo "need to update your level0 configuration to deploy a launchpad at this level."
+            echo
         else
-            echo
-            echo "There is no remote state for ${TF_VAR_level} in the environment ${TF_VAR_environment} in the subscription ${TF_VAR_tfstate_subscription_id}"
-            echo "You need to update the launchpad configuration and add an additional level or deploy in the level0."
-            echo "Or you do not have permissions to access the launchpad."
-            echo
-            echo "List of the other launchpad deployed"
-            execute_with_backoff az storage account list \
-                --subscription ${TF_VAR_tfstate_subscription_id} \
-                --query "[?tags.tfstate=='${TF_VAR_level}'].{name:name,environment:tags.environment, launchpad:tags.launchpad}" -o table
-
-            exit 0
+            display_launchpad_instructions
         fi
+        echo "List of the other launchpads deployed:"
+        execute_with_backoff az storage account list \
+            --subscription ${TF_VAR_tfstate_subscription_id} \
+            --query "[?tags.tfstate=='${TF_VAR_level}'].{name:name,environment:tags.environment, \
+            launchpad:tags.launchpad}" -o table
+
+        exit 1000
     fi
 }
