@@ -11,7 +11,7 @@ function initialize_state {
     echo "Installing launchpad from ${landingzone_name}"
     cd ${landingzone_name}
 
-    sudo rm -f -- ${landingzone_name}/backend.azurerm.tf
+    rm -f -- ${landingzone_name}/backend.azurerm.tf
 
     rm -f -- "${TF_DATA_DIR}/terraform.tfstate"
 
@@ -136,7 +136,7 @@ function deploy_from_remote_state {
     cd ${landingzone_name}
 
     if [ -f "backend.azurerm" ]; then
-        sudo cp backend.azurerm backend.azurerm.tf
+        cp backend.azurerm backend.azurerm.tf
     fi
 
     login_as_launchpad
@@ -260,7 +260,6 @@ function plan {
                 plan ${plan_command} \
                 -refresh=true \
                 -detailed-exitcode \
-                -lock=false \
                 -state="${TF_DATA_DIR}/tfstates/${TF_VAR_level}/${TF_VAR_workspace}/${TF_VAR_tf_name}" \
                 -out="${TF_DATA_DIR}/tfstates/${TF_VAR_level}/${TF_VAR_workspace}/${TF_VAR_tf_plan}"  | tee ${tf_output_file}
             ;;
@@ -384,12 +383,12 @@ function destroy {
     echo "terraform destroy parameters: -chdir=${landingzone_name} apply -refresh=false $(parse_command_destroy_with_plan ${tf_command}) ${tf_approve} ${tf_plan_file}"
 
     rm -f "${TF_DATA_DIR}/terraform.tfstate"
-    sudo rm -f ${landingzone_name}/backend.azurerm.tf
+    rm -f ${landingzone_name}/backend.azurerm.tf
 
     if [ "$1" == "remote" ]; then
 
         if [ -e backend.azurerm ]; then
-            sudo cp -f backend.azurerm backend.azurerm.tf
+            cp -f backend.azurerm backend.azurerm.tf
         fi
 
         echo 'running terraform destroy remote'
@@ -410,6 +409,7 @@ function destroy {
                 terraform -chdir=${landingzone_name} \
                     apply \
                     -refresh=false \
+                    -lock=false \
                     $(parse_command_destroy_with_plan ${tf_command}) ${tf_approve} \
                     "${tf_plan_file}"
                 ;;
